@@ -1,20 +1,27 @@
 import { Tensor } from "onnxruntime-react-native";
-import { INPUT_HEIGHT, INPUT_WIDTH } from "../../config/modelConfig";
-import { AnalyzeOutcome, DetectionResult } from "../../types/detection";
+import { AnalyzeOutcome } from "../../types/detection";
 import { imageUriToTensor } from "./imagePreprocessor";
 import { getOnnxSession } from "./modelLoader";
 import { parseYoloOutput } from "./postProcessor";
 
 export async function detectPestsOnDevice(imageUri: string): Promise<AnalyzeOutcome> {
   const session = await getOnnxSession();
-  const { tensor } = await imageUriToTensor(imageUri);
+  const pre = await imageUriToTensor(imageUri);
   const inputName = session.inputNames[0];
-  const feeds: Record<string, Tensor> = { [inputName]: tensor };
+  const feeds: Record<string, Tensor> = { [inputName]: pre.tensor };
+  console.log("[INFERENCE] Starting", { inputName, outputNames: session.outputNames });
   const results = await session.run(feeds);
   const outputName = session.outputNames[0];
   const output = results[outputName];
+  console.log("[INFERENCE] Completed", { outputName, dims: output.dims, type: output.type });
   const data = output.data as Float32Array;
-  const detections: DetectionResult[] = parseYoloOutput(data, output.dims, INPUT_WIDTH, INPUT_HEIGHT);
+  const detections = parseYoloOutput(data, output.dims, {
+    origWidth: pre.origWidth,
+    origHeight: pre.origHeight,
+    scale: pre.scale,
+    padX: pre.padX,
+    padY: pre.padY,
+  });
   const top = detections[0];
   return {
     detections,

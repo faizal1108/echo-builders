@@ -1,18 +1,34 @@
 # Paddy AI Scanner (Android / Expo)
 
-Offline **YOLO ONNX** pest detection on device. Gemini only explains the **text result**. The leaf image is never sent to Gemini.
+Offline **YOLO ONNX** pest detection on device. The production APK embeds JavaScript and `rice_pest_model.onnx`. Metro is **not** required after install.
 
-This will **not** run inside Expo Go. Use a development build:
+## Standalone release APK (no Metro, no Wi-Fi)
 
-```bash
-npx expo prebuild --platform android
-npx expo run:android
+Do **not** use `npx expo start` or `npx expo run:android` for the demo APK. Those produce a **debug / development client** that tries `127.0.0.1:8081`.
+
+```powershell
+cd A:\project\ECHO\app-develop
+npm run apk:release
 ```
+
+APK path:
+
+`android/app/build/outputs/apk/release/app-release.apk`
+
+Install (USB, Metro stopped):
+
+```powershell
+adb install -r android/app/build/outputs/apk/release/app-release.apk
+```
+
+Uninstall the old debug app first if install fails: `adb uninstall com.echobuilders.paddyaiscanner`
+
+Then open **Paddy AI Scanner** from the launcher with Wi-Fi and mobile data off.
 
 ## 1. Put your ONNX model here
 
 ```text
-app-develop/assets/models/paddy_pest_model.onnx
+app-develop/assets/models/rice_pest_model.onnx
 ```
 
 Export from Ultralytics (example):

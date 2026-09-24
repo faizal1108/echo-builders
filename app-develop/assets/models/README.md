@@ -1,5 +1,6 @@
 Place your YOLO ONNX file here as:
 
-paddy_pest_model.onnx
+rice_pest_model.onnx
 
-See README.md for export and class-label instructions.
+Export example:
+yolo export model=best.pt format=onnx imgsz=640

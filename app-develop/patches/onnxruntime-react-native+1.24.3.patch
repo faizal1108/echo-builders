@@ -15,3 +15,346 @@ index 41b4359..2acada0 100644
      extractLibs "com.facebook.fbjni:fbjni:+:headers"
      extractLibs "com.facebook.fbjni:fbjni:+"
    }
+diff --git a/node_modules/onnxruntime-react-native/android/src/main/java/ai/onnxruntime/reactnative/OnnxruntimeModule.java b/node_modules/onnxruntime-react-native/android/src/main/java/ai/onnxruntime/reactnative/OnnxruntimeModule.java
+index c362e6a..4da0921 100644
+--- a/node_modules/onnxruntime-react-native/android/src/main/java/ai/onnxruntime/reactnative/OnnxruntimeModule.java
++++ b/node_modules/onnxruntime-react-native/android/src/main/java/ai/onnxruntime/reactnative/OnnxruntimeModule.java
+@@ -6,27 +6,34 @@ package ai.onnxruntime.reactnative;
+ import java.util.Map;
+ import java.util.HashMap;
+ import android.os.Build;
++import android.util.Log;
+ import androidx.annotation.NonNull;
+ import androidx.annotation.RequiresApi;
+ import com.facebook.react.bridge.JavaScriptContextHolder;
+ import com.facebook.react.bridge.ReactMethod;
+ import com.facebook.react.bridge.ReactApplicationContext;
+ import com.facebook.react.bridge.ReactContextBaseJavaModule;
++import com.facebook.react.module.annotations.ReactModule;
+ import com.facebook.react.turbomodule.core.CallInvokerHolderImpl;
++import com.facebook.react.turbomodule.core.interfaces.CallInvokerHolder;
+ 
++@ReactModule(name = OnnxruntimeModule.NAME)
+ @RequiresApi(api = Build.VERSION_CODES.N)
+ public class OnnxruntimeModule extends ReactContextBaseJavaModule {
++  public static final String NAME = "Onnxruntime";
++  private static final String TAG = "Onnxruntime";
+   private static ReactApplicationContext reactContext;
+ 
+   public OnnxruntimeModule(ReactApplicationContext context) {
+     super(context);
+     reactContext = context;
++    Log.i(TAG, "OnnxruntimeModule constructed");
+   }
+ 
+   @NonNull
+   @Override
+   public String getName() {
+-    return "Onnxruntime";
++    return NAME;
+   }
+ 
+   native void nativeInstall(long jsiPointer, CallInvokerHolderImpl jsCallInvokerHolder);
+@@ -40,18 +47,31 @@ public class OnnxruntimeModule extends ReactContextBaseJavaModule {
+   }
+ 
+   /**
+-   * Install onnxruntime JSI API
++   * Install onnxruntime JSI API (works on the old bridge and Bridgeless / ReactHost).
+    */
+   @ReactMethod(isBlockingSynchronousMethod = true)
+   public boolean install() {
+     try {
+       System.loadLibrary("onnxruntimejsi");
+       JavaScriptContextHolder jsContext = getReactApplicationContext().getJavaScriptContextHolder();
+-      CallInvokerHolderImpl jsCallInvokerHolder =
+-        (CallInvokerHolderImpl) getReactApplicationContext().getCatalystInstance().getJSCallInvokerHolder();
+-      nativeInstall(jsContext.get(), jsCallInvokerHolder);
++      if (jsContext == null) {
++        Log.e(TAG, "JavaScriptContextHolder is null");
++        return false;
++      }
++      long ptr = jsContext.get();
++      if (ptr == 0) {
++        Log.e(TAG, "JavaScript runtime pointer is 0");
++        return false;
++      }
++      CallInvokerHolder invoker = getReactApplicationContext().getJSCallInvokerHolder();
++      if (!(invoker instanceof CallInvokerHolderImpl)) {
++        Log.e(TAG, "JS CallInvoker is not a CallInvokerHolderImpl: " + invoker);
++        return false;
++      }
++      nativeInstall(ptr, (CallInvokerHolderImpl) invoker);
+       return true;
+     } catch (Exception e) {
++      Log.e(TAG, "JSI install failed", e);
+       return false;
+     }
+   }
+diff --git a/node_modules/onnxruntime-react-native/android/src/main/java/ai/onnxruntime/reactnative/OnnxruntimePackage.java b/node_modules/onnxruntime-react-native/android/src/main/java/ai/onnxruntime/reactnative/OnnxruntimePackage.java
+index 9171641..1eb7ae8 100644
+--- a/node_modules/onnxruntime-react-native/android/src/main/java/ai/onnxruntime/reactnative/OnnxruntimePackage.java
++++ b/node_modules/onnxruntime-react-native/android/src/main/java/ai/onnxruntime/reactnative/OnnxruntimePackage.java
+@@ -4,20 +4,23 @@
+ package ai.onnxruntime.reactnative;
+ 
+ import android.os.Build;
++import android.util.Log;
+ import androidx.annotation.NonNull;
++import androidx.annotation.Nullable;
+ import androidx.annotation.RequiresApi;
+-import com.facebook.react.ReactPackage;
+ import com.facebook.react.bridge.NativeModule;
+ import com.facebook.react.bridge.ReactApplicationContext;
+-import com.facebook.react.modules.blob.BlobModule;
++import com.facebook.react.BaseReactPackage;
++import com.facebook.react.module.model.ReactModuleInfo;
++import com.facebook.react.module.model.ReactModuleInfoProvider;
+ import com.facebook.react.uimanager.ViewManager;
+ import java.util.ArrayList;
+ import java.util.Collections;
++import java.util.HashMap;
+ import java.util.List;
++import java.util.Map;
+ 
+-public class OnnxruntimePackage implements ReactPackage {
+-  @RequiresApi(api = Build.VERSION_CODES.N)
+-  @NonNull
++public class OnnxruntimePackage extends BaseReactPackage {
+   @Override
+   public List<NativeModule> createNativeModules(@NonNull ReactApplicationContext reactContext) {
+     List<NativeModule> modules = new ArrayList<>();
+@@ -25,6 +28,32 @@ public class OnnxruntimePackage implements ReactPackage {
+     return modules;
+   }
+ 
++  @Nullable
++  @Override
++  public NativeModule getModule(@NonNull String name, @NonNull ReactApplicationContext reactContext) {
++    if ("Onnxruntime".equals(name)) {
++      return new OnnxruntimeModule(reactContext);
++    }
++    return null;
++  }
++
++  @Override
++  public ReactModuleInfoProvider getReactModuleInfoProvider() {
++    return () -> {
++      Map<String, ReactModuleInfo> map = new HashMap<>();
++      map.put(
++          "Onnxruntime",
++          new ReactModuleInfo(
++              "Onnxruntime",
++              "ai.onnxruntime.reactnative.OnnxruntimeModule",
++              false,
++              false,
++              false,
++              false));
++      return map;
++    };
++  }
++
+   @NonNull
+   @Override
+   public List<ViewManager> createViewManagers(@NonNull ReactApplicationContext reactContext) {
+diff --git a/node_modules/onnxruntime-react-native/dist/commonjs/binding.js b/node_modules/onnxruntime-react-native/dist/commonjs/binding.js
+index b5ca0ca..4c876c3 100644
+--- a/node_modules/onnxruntime-react-native/dist/commonjs/binding.js
++++ b/node_modules/onnxruntime-react-native/dist/commonjs/binding.js
+@@ -5,16 +5,18 @@ Object.defineProperty(exports, "__esModule", {
+ });
+ exports.OrtApi = exports.Module = void 0;
+ var _reactNative = require("react-native");
+-// Copyright (c) Microsoft Corporation. All rights reserved.
+-// Licensed under the MIT License.
+-
+ const Module = exports.Module = _reactNative.NativeModules.Onnxruntime;
+ if (typeof globalThis.OrtApi === 'undefined') {
+-  Module.install();
++  if (Module == null || typeof Module.install !== 'function') {
++    throw new Error("Onnxruntime native module is not linked on " + _reactNative.Platform.OS + ". NativeModules.Onnxruntime=" + String(Module));
++  }
++  const installed = Module.install();
++  if (!installed && typeof globalThis.OrtApi === 'undefined') {
++    throw new Error('Onnxruntime JSI install() failed. Check logcat tag Onnxruntime.');
++  }
+ }
+ const OrtApi = exports.OrtApi = globalThis.OrtApi ?? new Proxy({}, {
+   get: () => {
+     throw new Error('OrtApi is not initialized. Please make sure Onnxruntime installation is successful.');
+   }
+ });
+-//# sourceMappingURL=binding.js.map
+\ No newline at end of file
+diff --git a/node_modules/onnxruntime-react-native/dist/module/binding.js b/node_modules/onnxruntime-react-native/dist/module/binding.js
+index e1bca3a..ef0e504 100644
+--- a/node_modules/onnxruntime-react-native/dist/module/binding.js
++++ b/node_modules/onnxruntime-react-native/dist/module/binding.js
+@@ -1,16 +1,18 @@
+ "use strict";
+ 
+-// Copyright (c) Microsoft Corporation. All rights reserved.
+-// Licensed under the MIT License.
+-
+-import { NativeModules } from 'react-native';
++import { NativeModules, Platform } from 'react-native';
+ export const Module = NativeModules.Onnxruntime;
+ if (typeof globalThis.OrtApi === 'undefined') {
+-  Module.install();
++  if (Module == null || typeof Module.install !== 'function') {
++    throw new Error(`Onnxruntime native module is not linked on ${Platform.OS}. NativeModules.Onnxruntime=${String(Module)}`);
++  }
++  const installed = Module.install();
++  if (!installed && typeof globalThis.OrtApi === 'undefined') {
++    throw new Error('Onnxruntime JSI install() failed. Check logcat tag Onnxruntime.');
++  }
+ }
+ export const OrtApi = globalThis.OrtApi ?? new Proxy({}, {
+   get: () => {
+     throw new Error('OrtApi is not initialized. Please make sure Onnxruntime installation is successful.');
+   }
+ });
+-//# sourceMappingURL=binding.js.map
+\ No newline at end of file
+diff --git a/node_modules/onnxruntime-react-native/lib/backend.ts b/node_modules/onnxruntime-react-native/lib/backend.ts
+index 31227e7..9469618 100644
+--- a/node_modules/onnxruntime-react-native/lib/backend.ts
++++ b/node_modules/onnxruntime-react-native/lib/backend.ts
+@@ -4,7 +4,7 @@
+ import type { Backend, InferenceSession, InferenceSessionHandler, SessionHandler } from 'onnxruntime-common';
+ import { env, Tensor } from 'onnxruntime-common';
+ import type { InferenceSessionImpl, ValueMetadata, SessionOptions } from './api';
+-import { OrtApi, Module } from './binding';
++import { OrtApi, Module, ensureOrtInstalled } from './binding';
+ 
+ const dataTypeStrings = [
+   undefined, // 0
+@@ -94,6 +94,7 @@ class OnnxruntimeSessionHandler implements InferenceSessionHandler {
+   }
+ 
+   static async create(pathOrBuffer: string | Uint8Array, options: SessionOptions) {
++    ensureOrtInstalled();
+     if (!OnnxruntimeSessionHandler.#initialized) {
+       OnnxruntimeSessionHandler.#initialized = true;
+ 
+@@ -190,4 +191,7 @@ class OnnxruntimeBackend implements Backend {
+ }
+ 
+ export const onnxruntimeBackend = new OnnxruntimeBackend();
+-export const listSupportedBackends = OrtApi.listSupportedBackends;
++export function listSupportedBackends() {
++  ensureOrtInstalled();
++  return OrtApi.listSupportedBackends();
++}
+diff --git a/node_modules/onnxruntime-react-native/lib/binding.ts b/node_modules/onnxruntime-react-native/lib/binding.ts
+index f5963a0..f5557f5 100644
+--- a/node_modules/onnxruntime-react-native/lib/binding.ts
++++ b/node_modules/onnxruntime-react-native/lib/binding.ts
+@@ -1,26 +1,75 @@
+ // Copyright (c) Microsoft Corporation. All rights reserved.
+ // Licensed under the MIT License.
+ 
+-import { NativeModules } from 'react-native';
++import { NativeModules, Platform, TurboModuleRegistry } from 'react-native';
+ import type { OrtApi as OrtApiType } from './api';
+ 
+-export const Module = NativeModules.Onnxruntime;
++function nativeModule(): { install?: () => boolean; ORT_EXTENSIONS_PATH?: string } | null {
++  const fromLegacy = NativeModules.Onnxruntime;
++  if (fromLegacy) {
++    return fromLegacy;
++  }
++  try {
++    const fromTurbo = TurboModuleRegistry.get('Onnxruntime');
++    if (fromTurbo) {
++      return fromTurbo as { install?: () => boolean; ORT_EXTENSIONS_PATH?: string };
++    }
++  } catch {
++    // Bridgeless may throw if the name is unknown.
++  }
++  const proxy = (globalThis as { nativeModuleProxy?: Record<string, unknown> }).nativeModuleProxy;
++  if (proxy && proxy.Onnxruntime) {
++    return proxy.Onnxruntime as { install?: () => boolean; ORT_EXTENSIONS_PATH?: string };
++  }
++  return null;
++}
++
++export const Module = new Proxy(
++  {},
++  {
++    get(_target, prop) {
++      const mod = nativeModule();
++      if (mod == null) {
++        return undefined;
++      }
++      return (mod as Record<string | symbol, unknown>)[prop];
++    },
++  },
++) as typeof NativeModules.Onnxruntime;
+ 
+ declare global {
+   var OrtApi: OrtApiType; // eslint-disable-line no-var
+ }
+ 
+-if (typeof globalThis.OrtApi === 'undefined') {
+-  Module.install();
++export function ensureOrtInstalled(): void {
++  if (typeof globalThis.OrtApi !== 'undefined') {
++    return;
++  }
++  const keys = Object.keys(NativeModules || {});
++  const mod = nativeModule();
++  if (mod == null || typeof mod.install !== 'function') {
++    throw new Error(
++      `Onnxruntime native module is not linked on ${Platform.OS}. NativeModules.Onnxruntime=${String(
++        NativeModules.Onnxruntime,
++      )} keys=${keys.join(',')}`,
++    );
++  }
++  const installed = mod.install();
++  if (!installed && typeof globalThis.OrtApi === 'undefined') {
++    throw new Error('Onnxruntime JSI install() failed. Check logcat tag Onnxruntime.');
++  }
+ }
+ 
+-export const OrtApi =
+-  globalThis.OrtApi ??
+-  new Proxy(
+-    {},
+-    {
+-      get: () => {
++export const OrtApi = new Proxy(
++  {},
++  {
++    get(_target, prop) {
++      ensureOrtInstalled();
++      const api = globalThis.OrtApi;
++      if (api == null) {
+         throw new Error('OrtApi is not initialized. Please make sure Onnxruntime installation is successful.');
+-      },
++      }
++      return (api as Record<string | symbol, unknown>)[prop];
+     },
+-  );
++  },
++) as OrtApiType;
+diff --git a/node_modules/onnxruntime-react-native/lib/index.ts b/node_modules/onnxruntime-react-native/lib/index.ts
+index 3523be6..026cb07 100644
+--- a/node_modules/onnxruntime-react-native/lib/index.ts
++++ b/node_modules/onnxruntime-react-native/lib/index.ts
+@@ -5,12 +5,10 @@ export * from 'onnxruntime-common';
+ export { listSupportedBackends } from './backend';
+ 
+ import { registerBackend, env } from 'onnxruntime-common';
+-import { onnxruntimeBackend, listSupportedBackends } from './backend';
++import { onnxruntimeBackend } from './backend';
+ import { version } from './version';
+ 
+-const backends = listSupportedBackends();
+-for (const backend of backends) {
+-  registerBackend(backend.name, onnxruntimeBackend, 1);
+-}
++registerBackend('cpu', onnxruntimeBackend, 1);
++registerBackend('xnnpack', onnxruntimeBackend, 1);
+ 
+ Object.defineProperty(env.versions, 'react-native', { value: version, enumerable: true });

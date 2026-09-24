@@ -1,33 +1,16 @@
 /**
- * Replace these values to match your exported YOLO ONNX model.
- * Class order MUST match the training dataset / YAML `names` list.
+ * YOLO11s rice pest detector — match export: 640x640, 102 classes, output [1, 106, 8400].
  */
 export const INPUT_WIDTH = 640;
 export const INPUT_HEIGHT = 640;
-export const CONFIDENCE_THRESHOLD = 0.4;
+export const CONFIDENCE_THRESHOLD = 0.25;
 export const IOU_THRESHOLD = 0.45;
-
-/** Stretch resize to INPUT_WIDTH x INPUT_HEIGHT. Set true if you trained with Ultralytics letterbox. */
-export const USE_LETTERBOX = false;
-
-/** YOLO pixel values are divided by 255 (typical). Set false only if your export used another scheme. */
+export const USE_LETTERBOX = true;
 export const NORMALIZE_0_1 = true;
-
-export const PADDY_CLASSES = [
-  "Rice Leaf Roller",
-  "Rice Leaf Caterpillar",
-  "Paddy Stem Maggot",
-  "Stem Borer",
-  "Brown Plant Hopper",
-  "Leaf Folder",
-  "Stink Bug",
-  "Pyrilla",
-  "Healthy Leaf",
-];
+export const LETTERBOX_PAD = 114 / 255;
 
 /**
- * Optional: IP102 names from pest-detection-model/pests.yaml (102 classes).
- * To use the IP102-trained weights, set `CLASS_NAMES = IP102_CLASSES`.
+ * IP102 names from pest-detection-model/pests.yaml. Order must match training.
  */
 export const IP102_CLASSES = [
   "rice leaf roller",
@@ -134,10 +117,9 @@ export const IP102_CLASSES = [
   "Cicadellidae",
 ];
 
-/** Active label list used by post-processing. */
-export const CLASS_NAMES = PADDY_CLASSES;
+export const CLASS_NAMES = IP102_CLASSES;
 
-export const MODEL_ASSET = require("../../assets/models/paddy_pest_model.onnx");
+export const MODEL_FILE_NAME = "rice_pest_model.onnx";
 
 export function severityFromConfidence(confidence: number): "Low" | "Moderate" | "High" {
   if (confidence >= 0.85) return "High";
