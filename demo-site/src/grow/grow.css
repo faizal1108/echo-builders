@@ -1,0 +1,243 @@
+@keyframes echo-sway {
+  0%,
+  100% {
+    transform: rotate(-1.4deg);
+  }
+  50% {
+    transform: rotate(1.8deg);
+  }
+}
+
+@keyframes echo-sway-soft {
+  0%,
+  100% {
+    transform: rotate(-0.8deg);
+  }
+  50% {
+    transform: rotate(1.1deg);
+  }
+}
+
+@keyframes echo-float {
+  0% {
+    transform: translate3d(0, 8px, 0) rotate(0deg);
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.5;
+  }
+  100% {
+    transform: translate3d(18px, -140px, 0) rotate(24deg);
+    opacity: 0;
+  }
+}
+
+@keyframes echo-sun {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.06);
+  }
+}
+
+@keyframes echo-cloud {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(28px);
+  }
+}
+
+@keyframes echo-ripple {
+  0%,
+  100% {
+    transform: scaleX(1);
+    opacity: 0.35;
+  }
+  50% {
+    transform: scaleX(1.08);
+    opacity: 0.55;
+  }
+}
+
+@keyframes echo-unfurl {
+  from {
+    opacity: 0;
+    transform: scale(0.15, 0.4) rotate(-12deg);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1, 1) rotate(0deg);
+  }
+}
+
+@keyframes echo-rise {
+  from {
+    opacity: 0;
+    transform: scaleY(0.12);
+  }
+  to {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+
+@keyframes echo-root {
+  from {
+    stroke-dashoffset: 120;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes echo-seed-split {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(1.15);
+  }
+}
+
+@keyframes echo-droop {
+  from {
+    transform: rotate(-8deg) scale(0.4);
+    opacity: 0;
+  }
+  to {
+    transform: rotate(0deg) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes echo-sparkle {
+  0%,
+  100% {
+    opacity: 0.15;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.grow-stage {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.grow-stage.is-on {
+  opacity: 1;
+}
+
+.grow-unfurl {
+  transform-origin: left center;
+  transform-box: fill-box;
+}
+
+.grow-unfurl.is-on {
+  animation: echo-unfurl 1.15s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.grow-unfurl-right {
+  transform-origin: right center;
+  transform-box: fill-box;
+}
+
+.grow-unfurl-right.is-on {
+  animation: echo-unfurl 1.15s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.grow-rise {
+  transform-origin: center bottom;
+  transform-box: fill-box;
+}
+
+.grow-rise.is-on {
+  animation: echo-rise 1.35s cubic-bezier(0.22, 1, 0.32, 1) both;
+}
+
+.grow-droop.is-on {
+  transform-origin: center top;
+  transform-box: fill-box;
+  animation: echo-droop 1.2s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.grow-plant-sway {
+  transform-origin: 240px 430px;
+  animation: echo-sway 6.5s ease-in-out infinite;
+}
+
+.grow-tiller-l {
+  transform-origin: 240px 428px;
+  animation: echo-sway-soft 7.2s ease-in-out infinite;
+}
+
+.grow-tiller-r {
+  transform-origin: 240px 428px;
+  animation: echo-sway-soft 6.4s 0.4s ease-in-out infinite;
+}
+
+.grow-sun-glow {
+  transform-origin: 390px 64px;
+  animation: echo-sun 8s ease-in-out infinite;
+}
+
+.grow-cloud {
+  animation: echo-cloud 18s ease-in-out infinite alternate;
+}
+
+.grow-cloud-2 {
+  animation: echo-cloud 22s 2s ease-in-out infinite alternate-reverse;
+}
+
+.grow-ripple {
+  transform-origin: 240px 448px;
+  animation: echo-ripple 4.5s ease-in-out infinite;
+}
+
+.grow-leaf-float {
+  animation: echo-float 12s linear infinite;
+}
+
+.grow-root-draw {
+  stroke-dasharray: 120;
+  animation: echo-root 1.6s ease forwards;
+}
+
+.grow-seed-split.is-on {
+  transform-origin: 240px 412px;
+  animation: echo-seed-split 1.1s ease both;
+}
+
+.grow-sparkle {
+  animation: echo-sparkle 2.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .grow-plant-sway,
+  .grow-tiller-l,
+  .grow-tiller-r,
+  .grow-sun-glow,
+  .grow-cloud,
+  .grow-cloud-2,
+  .grow-ripple,
+  .grow-leaf-float,
+  .grow-unfurl.is-on,
+  .grow-unfurl-right.is-on,
+  .grow-rise.is-on,
+  .grow-droop.is-on,
+  .grow-root-draw,
+  .grow-seed-split.is-on,
+  .grow-sparkle {
+    animation: none !important;
+  }
+  .grow-stage.is-on {
+    opacity: 1;
+  }
+}

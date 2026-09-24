@@ -1,0 +1,44 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  @apply bg-wheat-50 text-forest-900 antialiased;
+  background-image:
+    radial-gradient(1200px 500px at 10% -10%, rgba(86, 185, 154, 0.18), transparent 50%),
+    radial-gradient(900px 400px at 100% 0%, rgba(212, 163, 115, 0.16), transparent 45%);
+}
+
+.leaflet-container {
+  height: 100%;
+  width: 100%;
+  font-family: inherit;
+  background: #dcece1;
+  z-index: 0;
+}
+
+.echo-card {
+  @apply rounded-2xl bg-white/90 shadow-card border border-forest-100;
+}
+
+.echo-label {
+  @apply text-[11px] font-semibold tracking-[0.14em] uppercase text-forest-500;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 8px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #b7d7c1;
+  border-radius: 99px;
+}

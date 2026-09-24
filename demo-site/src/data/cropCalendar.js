@@ -1,0 +1,452 @@
+import { KONGU_NOTES, TAMIL_MONTHS, getLandType } from "./landTypes";
+import { cropProfiles } from "./cropProfiles";
+import { indiaMonthIndex } from "../utils/indiaTime";
+
+function irrig(landType, nanjaiText, punjaiText) {
+  return landType === "nanjai" ? nanjaiText : punjaiText;
+}
+
+function fertility(landType, base) {
+  if (landType === "nanjai") {
+    return `${base} In nanjai, split fertiliser and avoid washing nutrients with excess irrigation.`;
+  }
+  return `${base} In punjai, apply basal nutrients at sowing; top-dress only if soil moisture is adequate.`;
+}
+
+const CROP_MONTHS = {
+  Rice: {
+    preferred: "nanjai",
+    months: [
+      ["Navarai / summer crop grain fill or field rest", ["If irrigated navarai crop: watch panicle pests", "Repair field bunds and inlets"]],
+      ["Harvest leftover grain / puddle preparation", ["Sun-dry grain", "Plough after harvest where water is available"]],
+      ["Summer ploughing and green manure", ["Incorporate daincha / sunhemp if water allows", "Desilt field channels"]],
+      ["Nursery planning for Kar", ["Select certified seed", "Clean irrigation channels"]],
+      ["Kar nursery (nanjai) / wait for rain (punjai paddy is risky)", ["Raise wet nursery on nanjai", "Do not force paddy on punjai without assured water"]],
+      ["Kar transplanting", ["Transplant 20–25 day seedlings", "Maintain thin film of water"]],
+      ["Tillering / weed control", ["First weeding", "Top-dress N if crop is healthy"]],
+      ["Panicle initiation of Kar / Pisanam nursery", ["Keep standing water at PI", "Start Pisanam nursery"]],
+      ["Kar harvest or Pisanam transplant", ["Drain before harvest", "Transplant Samba / Pisanam"]],
+      ["Pisanam tillering — NE monsoon", ["Watch blast after rain", "Do not let flood water stagnate too long"]],
+      ["Flowering / grain filling", ["Protect from BPH after humid spells", "Maintain soil moisture"]],
+      ["Pisanam harvest", ["Harvest at 80–85% maturity", "Dry to safe moisture"]],
+    ],
+    pest: ["Brown planthopper", "Stem borer", "Leaf folder"],
+    disease: ["Blast", "BLB", "Sheath blight"],
+  },
+  Cholam: {
+    preferred: "punjai",
+    months: [
+      ["Rabi / leftover harvest and residue", ["Store grain dry", "Grazing / fodder from stovers"]],
+      ["Off-season land care", ["Deep summer plough later", "Plan seed of Co or local dual-purpose types"]],
+      ["Summer ploughing", ["Expose soil pests", "Repair field bunds for rain harvest"]],
+      ["Seed and manure ready", ["FYM 12.5 t/ha equivalent if available", "Treat seed as per officer advice"]],
+      ["Pre-monsoon tilth", ["Keep seedbed ready for Aadi showers"]],
+      ["Early sowing if showers come", ["Sow on moisture, not on dust"]],
+      ["Main Aadi sowing", ["Line sow, 45 cm rows", "Intercrop cowpea if practised locally"]],
+      ["Vegetative / thinning", ["Thin crowded plants", "Watch shoot fly / stem borer"]],
+      ["Boot / flowering", ["Need moisture at flowering", "Bird watch in small holdings"]],
+      ["Grain filling with NE rain", ["Drain waterlogging in low patches", "Grain mould watch if rain continues"]],
+      ["Harvest early sown crop", ["Harvest at physiological maturity"]],
+      ["Thresh, dry, store", ["Store with ash / airtight bags after drying"]],
+    ],
+    pest: ["Shoot fly", "Stem borer", "Aphids"],
+    disease: ["Grain mould", "Downy mildew", "Ergot"],
+  },
+  Cumbu: {
+    preferred: "punjai",
+    months: [
+      ["Off-season / fodder use", ["Use stovers as fodder"]],
+      ["Land rest", ["Plan summer plough"]],
+      ["Summer plough", ["Break hard pan if possible"]],
+      ["Manure and seed", ["Choose downy-mildew tolerant seed"]],
+      ["Tilth for showers", ["Keep seed ready"]],
+      ["Early rainfed sowing", ["Sow with adequate moisture"]],
+      ["Aadi sowing window", ["30–45 cm spacing", "Intercrop pulses on punjai"]],
+      ["Tillering", ["Weed once", "Watch rust in humid weeks"]],
+      ["Heading", ["Birds and head miner watch"]],
+      ["Grain fill", ["Avoid harvest during heavy NE rain"]],
+      ["Harvest", ["Dry heads well"]],
+      ["Storage", ["Clean grain; keep from moisture"]],
+    ],
+    pest: ["Shoot fly", "Stem borer"],
+    disease: ["Downy mildew", "Rust", "Ergot"],
+  },
+  Ragi: {
+    preferred: "punjai",
+    months: [
+      ["Store and kitchen use", ["Ragi is a Kongu food-security crop"]],
+      ["Land preparation starts", ["FYM incorporation"]],
+      ["Summer plough", ["Moisture conservation furrows"]],
+      ["Nursery optional (irrigated ragi)", ["Nanjai: raise nursery; punjai: direct sow later"]],
+      ["Wait for pre-monsoon", ["Do not sow in hot dry crust"]],
+      ["Transplant irrigated crop", ["Nanjai ragi transplant if wells have water"]],
+      ["Rainfed sowing", ["Aadi sowing on punjai"]],
+      ["Tillering / weeding", ["Hand weed; watch blast"]],
+      ["Flowering", ["Need moisture"]],
+      ["Grain fill", ["Protect from birds"]],
+      ["Harvest", ["Dry fingers well"]],
+      ["Thresh and store", ["Store as grain or flour after full dry"]],
+    ],
+    pest: ["Aphids", "Stem borer"],
+    disease: ["Blast", "Leaf blight"],
+  },
+  Maize: {
+    preferred: "punjai",
+    months: [
+      ["Rabi harvest if planted Oct", ["Dry cobs; store"]],
+      ["Field clean-up", ["Destroy stalk to reduce borer"]],
+      ["Summer plough", ["Plan kharif seed"]],
+      ["Irrigation maize only on nanjai", ["Punjai: wait for rain"]],
+      ["Pre-monsoon land", ["FYM / compost"]],
+      ["Kharif sowing with showers", ["Treat seed; 60×20 cm"]],
+      ["Aadi crop vegetative", ["Scout fall armyworm in whorl"]],
+      ["Tasseling", ["Irrigation critical on nanjai; punjai depends on rain"]],
+      ["Silking / grain", ["Avoid water stress"]],
+      ["Rabi sowing after NE rain", ["Second crop possible on residual moisture"]],
+      ["Rabi vegetative", ["FAW watch continues"]],
+      ["Rabi grain fill", ["Harvest kharif leftovers"]],
+    ],
+    pest: ["Fall armyworm", "Stem borer"],
+    disease: ["Turcicum blight", "Downy mildew", "Stalk rot"],
+  },
+  Cotton: {
+    preferred: "punjai",
+    months: [
+      ["Boll opening / picking", ["Pick clean kapas every 7–10 days"]],
+      ["Last picking and cleanup", ["Remove cotton stalks (pink bollworm hygiene)"]],
+      ["Summer plough", ["Do not keep ratoon unless advised"]],
+      ["Seed, FYM, ridges", ["Bt / recommended hybrids via licensed dealers"]],
+      ["Sowing with pre-monsoon (irrigated)", ["Nanjai/well: can sow; punjai wait"]],
+      ["Main sowing", ["45–90 cm spacing by type"]],
+      ["Square formation", ["Jassid / whitefly scouting", "Do not spray blindly"]],
+      ["Flowering", ["Square drop watch", "Need moisture"]],
+      ["Boll formation", ["Pink bollworm traps", "Avoid excess N"]],
+      ["Boll development / rain", ["Boll rot after NE rain — drainage"]],
+      ["Picking starts", ["Pick dry kapas"]],
+      ["Continued picking", ["Stalk pull after last pick"]],
+    ],
+    pest: ["Pink bollworm", "Whitefly", "Jassids"],
+    disease: ["Wilt", "Bacterial blight", "Root rot"],
+  },
+  Groundnut: {
+    preferred: "punjai",
+    months: [
+      ["Pod drying / storage", ["Dry pods to rattle"]],
+      ["Land rest", ["Do not leave haulms wet in heap"]],
+      ["Summer plough", ["Expose white grubs"]],
+      ["Seed of TMV / local types", ["Rhizobium if advised"]],
+      ["Irrigated summer groundnut (nanjai)", ["Punjai skip summer crop"]],
+      ["Kharif sowing with rain", ["Sandy loam best"]],
+      ["Vegetative", ["Gypsum at flowering if recommended locally"]],
+      ["Pegging", ["Do not disturb soil; moisture critical"]],
+      ["Pod fill", ["Leaf spot after rain"]],
+      ["Harvest early kharif / rabi sow", ["Lift at maturity — pods brown netted"]],
+      ["Rabi / residual moisture crop", ["Possible after NE rain"]],
+      ["Harvest rabi", ["Strip and dry"]],
+    ],
+    pest: ["Leaf miner", "Thrips", "White grub"],
+    disease: ["Leaf spot", "Rust", "Collar rot"],
+  },
+  Sugarcane: {
+    preferred: "nanjai",
+    months: [
+      ["Grand growth / mill cane", ["Irrigation 7–10 days on nanjai", "Punjai cane not advised without water"]],
+      ["Elongation", ["Trash mulch", "Watch internodal borer"]],
+      ["Hot weather irrigation", ["Do not skip irrigation in Chithirai heat"]],
+      ["Planting season (early)", ["Setts from disease-free crop", "Furrow planting"]],
+      ["Main planting", ["Gap fill at 30 days"]],
+      ["Tillering", ["Earthing up", "Shoot borer watch"]],
+      ["Tillering / monsoon", ["Drainage in low nanjai", "Avoid waterlogging rot"]],
+      ["Grand growth", ["Nitrogen split complete"]],
+      ["Cane formation", ["Propping if lodging wind"]],
+      ["Ripening starts", ["Reduce irrigation slightly before harvest"]],
+      ["Harvest / ratoon", ["Harvest at 10–12 months", "Ratoon dressing"]],
+      ["Ratoon irrigation", ["Stubble shaving and off-baring"]],
+    ],
+    pest: ["Early shoot borer", "Internode borer", "Woolly aphid"],
+    disease: ["Red rot", "Smut", "Wilt"],
+  },
+  Banana: {
+    preferred: "nanjai",
+    months: [
+      ["Bunch development (Nendran / Poovan / Robusta)", ["Propping", "Remove male bud after last hand if practised"]],
+      ["Harvest / planting pits", ["Plant suckers in cool months on nanjai"]],
+      ["Summer irrigation critical", ["Mulch basins", "Punjai banana only with drip + pond"]],
+      ["Planting continues", ["Tissue culture plants from licensed nurseries"]],
+      ["Vegetative", ["Desucker", "Nematode / weevil watch"]],
+      ["Growth", ["Fertigation or basin manure"]],
+      ["Monsoon drainage", ["Do not let water stand at corm"]],
+      ["Flowering in 8–10 month plants", ["Bunch spray only if officer advises"]],
+      ["Bunch care", ["Cover bunch if sun-scorch"]],
+      ["NE rain — sigatoka watch", ["Leaf spot; remove diseased leaves"]],
+      ["Harvest peak", ["Cut mature bunches"]],
+      ["Replant gaps", ["Corm weevil sanitation"]],
+    ],
+    pest: ["Rhizome weevil", "Aphids (bunchy top vector)", "Nematodes"],
+    disease: ["Sigatoka", "Panama wilt", "Bunchy top"],
+  },
+  Coconut: {
+    preferred: "nanjai",
+    months: [
+      ["Harvest 45-day round", ["Check for mite / rhinoceros beetle"]],
+      ["Basin weeding", ["Apply FYM in basins before summer"]],
+      ["Summer irrigation", ["Drip 60–80 L/palm/day class — follow local officer", "Punjai palms need farm pond / drip"]],
+      ["Mulch basins", ["Green leaf manure", "Watch drought yellowing"]],
+      ["Pre-monsoon nutrition", ["Boron / recommended dose only after soil test"]],
+      ["SW fringe — button shedding watch", ["Do not waterlog"]],
+      ["Aadi — planting new seedlings", ["Pit 1 m³ with compost"]],
+      ["Growth / intercrop", ["Cocoa / banana / cowpea as intercrop on nanjai"]],
+      ["NE monsoon drainage", ["Bud rot risk if water in crown"]],
+      ["Harvest", ["Collect nuts; dry copra if making copra"]],
+      ["Nutrition after rain", ["Split fertiliser if moisture present"]],
+      ["Harvest / hygiene", ["Remove dead leaves carefully; keep beetle traps"]],
+    ],
+    pest: ["Rhinoceros beetle", "Red palm weevil", "Coconut mite"],
+    disease: ["Bud rot", "Stem bleeding", "Leaf blight"],
+  },
+  Turmeric: {
+    preferred: "nanjai",
+    months: [
+      ["Late growth / irrigation", ["Rhizome swelling"]],
+      ["Harvest (8–9 months)", ["Boil, dry on clean yard — Kongu manjal practice"]],
+      ["Land rest / plough", ["Do not ratoon"]],
+      ["Beds and ridges", ["Raised beds on nanjai for drainage"]],
+      ["Planting rhizomes", ["Mother / finger rhizomes; treat as advised"]],
+      ["Mulch with green leaves", ["Traditional green-leaf mulch"]],
+      ["Vegetative", ["Earthing", "Leaf spot watch"]],
+      ["Canopy / monsoon", ["Drainage essential — rhizome rot"]],
+      ["Rhizome swell", ["Need even moisture"]],
+      ["NE rain protection", ["Do not flood beds"]],
+      ["Maturity signs", ["Leaves dry — prepare for harvest"]],
+      ["Early harvest in some gardens", ["Cure and grade"]],
+    ],
+    pest: ["Shoot borer", "Scale"],
+    disease: ["Rhizome rot", "Leaf spot", "Leaf blotch"],
+  },
+  Jasmine: {
+    preferred: "nanjai",
+    months: [
+      ["Flower flush (Malligai / Jathimalli)", ["Pick at dawn for Coimbatore flower market"]],
+      ["Prune lightly after flush", ["Manure basins"]],
+      ["Summer irrigation", ["Flower dip in heat without water"]],
+      ["Pruning season (main)", ["Hard prune as per local practice — often Panguni–Chithirai"]],
+      ["New flush", ["Watch bud worm"]],
+      ["Flowering resumes", ["Micronutrients only after test"]],
+      ["Monsoon drainage", ["Wilt if waterlogged"]],
+      ["Peak flower with humidity", ["Bud worm / blossom midge"]],
+      ["Flower to temple / market", ["Do not spray close to harvest"]],
+      ["NE rain — disease", ["Die-back, wilt"]],
+      ["Steady flush", ["Weeding"]],
+      ["Manure and irrigation", ["Prepare for Thai flush"]],
+    ],
+    pest: ["Bud worm", "Blossom midge", "Red spider mite"],
+    disease: ["Wilt", "Die-back", "Yellowing"],
+  },
+  Onion: {
+    preferred: "nanjai",
+    months: [
+      ["Rabi bulb development", ["Stop irrigation 10 days before harvest"]],
+      ["Harvest / curing", ["Cure in shade"]],
+      ["Store / summer plough", ["Do not bag wet bulbs"]],
+      ["Nursery for kharif (limited)", ["Punjai onion is risky without rain"]],
+      ["Land prep", ["Raised beds"]],
+      ["Kharif transplant irrigated", ["Close spacing"]],
+      ["Vegetative", ["Thrips watch in dry spells"]],
+      ["Bulb start", ["Even moisture"]],
+      ["Rabi sowing / transplant", ["Main season in Kongu with irrigation"]],
+      ["Vegetative rabi", ["Purple blotch after rain"]],
+      ["Bulbing", ["Do not over-irrigate"]],
+      ["Bulb fill", ["Neck fall = maturity approaching"]],
+    ],
+    pest: ["Thrips", "Leaf miner"],
+    disease: ["Purple blotch", "Basal rot", "Colletotrichum"],
+  },
+  Chilli: {
+    preferred: "punjai",
+    months: [
+      ["Fruiting of previous crop", ["Pick red ripe for dry chilli"]],
+      ["Nursery for summer irrigated crop", ["Punjai: field rest"]],
+      ["Summer crop transplant (nanjai / drip)", ["Mulch; thrips explode in heat"]],
+      ["Flowering summer crop", ["Do not water-stress at flower"]],
+      ["Harvest / kharif nursery", ["Raise nursery for Aadi planting"]],
+      ["Main field prep", ["FYM, ridges"]],
+      ["Transplant with Aadi rain / irrigation", ["45×30 cm"]],
+      ["Vegetative", ["Thrips, whitefly, leaf curl"]],
+      ["Flowering", ["Fruit borer", "Need moisture"]],
+      ["Fruiting in NE rain", ["Anthracnose on fruits after rain"]],
+      ["Picking", ["Dry on tarpaulin"]],
+      ["Last picks / cleanup", ["Remove crop residue"]],
+    ],
+    pest: ["Thrips", "Whitefly", "Fruit borer"],
+    disease: ["Leaf curl", "Anthracnose", "Powdery mildew"],
+  },
+  Tomato: {
+    preferred: "nanjai",
+    months: [
+      ["Harvest / ratoon not advised", ["Destroy residue to cut leaf curl"]],
+      ["Nursery", ["Protected nursery if virus pressure high"]],
+      ["Summer crop only with drip", ["Mulch; staking"]],
+      ["Flower / fruit", ["Blossom end rot if irregular water"]],
+      ["Harvest summer", ["Kharif nursery"]],
+      ["Land prep ridges", ["Avoid low nanjai pockets that flood"]],
+      ["Transplant", ["Staking", "FYM"]],
+      ["Vegetative", ["Early blight after rain"]],
+      ["Flowering", ["Fruit borer"]],
+      ["Fruiting — NE rain blight risk", ["Late blight watch; drainage"]],
+      ["Harvest", ["Pick regularly"]],
+      ["Wind-up", ["Do not leave volunteer plants"]],
+    ],
+    pest: ["Fruit borer", "Whitefly", "Leaf miner"],
+    disease: ["Early blight", "Late blight", "Leaf curl"],
+  },
+  Brinjal: {
+    preferred: "nanjai",
+    months: [
+      ["Continuous harvest", ["Remove infested shoots"]],
+      ["Nursery", ["Grafted plants if wilt history"]],
+      ["Transplant irrigated", ["Punjai only with life irrigation"]],
+      ["Vegetative", ["Shoot borer"]],
+      ["Flowering", ["Need even water"]],
+      ["Fruiting", ["Pick every 3–4 days"]],
+      ["Kharif plantings", ["Drainage in Aadi rain"]],
+      ["Borer peak", ["Clip wilted shoots daily"]],
+      ["Fruiting", ["Little leaf / hopper watch"]],
+      ["NE rain wilt", ["Avoid waterlogging"]],
+      ["Harvest", ["Market as tender fruits"]],
+      ["Replant gaps", ["Sanitation"]],
+    ],
+    pest: ["Shoot and fruit borer", "Epilachna", "Jassids"],
+    disease: ["Wilt", "Little leaf", "Phomopsis"],
+  },
+  Mango: {
+    preferred: "punjai",
+    months: [
+      ["Fruit development (off-season types limited)", ["Irrigation if fruit on tree"]],
+      ["Harvest of some local types", ["Fruit fly traps"]],
+      ["Summer — flowering in some years", ["Hopper / mildew at panicle"]],
+      ["Fruit set", ["Do not over-irrigate at flower"]],
+      ["Fruit growth", ["Drop watch"]],
+      ["Pre-monsoon nutrition", ["Basin manure"]],
+      ["Monsoon — vegetative flush", ["Anthracnose on new flush"]],
+      ["Canopy health", ["Prune after harvest cycle"]],
+      ["NE rain", ["Sooty mould if hoppers earlier"]],
+      ["Flower induction period (varies)", ["Paclobutrazol only under officer guidance"]],
+      ["Panicle watch", ["Do not spray during full bloom indiscriminately"]],
+      ["Fruit set of main season", ["Need moisture"]],
+    ],
+    pest: ["Hopper", "Fruit fly", "Mealybug"],
+    disease: ["Anthracnose", "Powdery mildew", "Sooty mould"],
+  },
+  Tapioca: {
+    preferred: "punjai",
+    months: [
+      ["Tuber fill of previous crop", ["Stop irrigation before harvest"]],
+      ["Harvest (9–11 months)", ["Process quickly — starch factories in Kongu belt"]],
+      ["Land prep", ["Ridges"]],
+      ["Plant setts", ["Disease-free setts"]],
+      ["Establishment", ["Gap fill"]],
+      ["Vegetative", ["Mealybug watch (papaya mealybug history in TN)"]],
+      ["Growth with rain", ["Do not waterlog"]],
+      ["Canopy", ["Intercrop pulses early only"]],
+      ["Tuber initiation", ["Need moisture"]],
+      ["Tuber swell", ["NE rain ok if drained"]],
+      ["Maturity approaching", ["Leaf yellowing"]],
+      ["Late planted still growing", ["Protect from livestock"]],
+    ],
+    pest: ["Mealybug", "Whitefly", "Scale"],
+    disease: ["Tuber rot", "Mosaic", "Brown leaf spot"],
+  },
+  Cowpea: {
+    preferred: "punjai",
+    months: [
+      ["Off-season", ["Green manure planning"]],
+      ["Summer plough", ["Pulse in rotation with cereals"]],
+      ["Summer crop only nanjai", ["Punjai wait"]],
+      ["Seed ready", ["Short-duration varieties"]],
+      ["Pre-monsoon", ["Can be intercrop with cholam"]],
+      ["Sowing with showers", ["Rhizobium if advised"]],
+      ["Aadi sowing / intercrop", ["Aphid watch"]],
+      ["Flowering", ["Need moisture at flower"]],
+      ["Pod pick (vegetable types)", ["Grain types dry on plant"]],
+      ["Harvest grain", ["Dry to rattle"]],
+      ["Rabi residual sowing", ["Possible after NE rain"]],
+      ["Harvest / incorporate residue", ["Improves punjai soil"]],
+    ],
+    pest: ["Aphids", "Pod borer"],
+    disease: ["Wilt", "Mosaic", "Powdery mildew"],
+  },
+  Other: {
+    preferred: "punjai",
+    months: [
+      ["Field assessment", ["Confirm crop with KVK Coimbatore / Pollachi"]],
+      ["Summer plough", ["Soil test"]],
+      ["Plan irrigation vs rainfed", ["Nanjai vs punjai decides crop choice"]],
+      ["Seed and manure", ["Use licensed seed"]],
+      ["Land ready", ["Bunds for punjai rain harvest"]],
+      ["Sowing / planting window", ["Match Aadi or irrigated calendar"]],
+      ["Establishment", ["Weed and scout weekly"]],
+      ["Vegetative", ["Do not over-apply nitrogen"]],
+      ["Reproductive", ["Moisture at flowering is critical"]],
+      ["NE monsoon care", ["Drainage on nanjai; harvest rain on punjai"]],
+      ["Harvest window", ["Dry produce before storage"]],
+      ["Residue and rotation", ["Rotate to break pest cycles"]],
+    ],
+    pest: ["Aphids", "Borer complex"],
+    disease: ["Leaf spots", "Wilt"],
+  },
+};
+
+export function buildCoimbatoreYearPlan(crop, landTypeId) {
+  const land = getLandType(landTypeId);
+  const spec = CROP_MONTHS[crop] || CROP_MONTHS.Other;
+  const profile = cropProfiles[crop] || cropProfiles.Other;
+  const mismatch = spec.preferred && spec.preferred !== landTypeId;
+
+  const months = TAMIL_MONTHS.map((tm, i) => {
+    const row = spec.months[i] || ["Seasonal care", ["Follow local officer guidance"]];
+    const [stage, activities] = row;
+    return {
+      monthIndex: i,
+      month: `${tm.en} (${tm.taEn})`,
+      tamil: tm.ta,
+      tamilName: tm.taEn,
+      season: tm.season,
+      stage,
+      activities,
+      irrigation: irrig(
+        landTypeId,
+        "Nanjai: irrigate from well / canal / drip on a fixed turn. Drain stagnant water after heavy Aippasi rain.",
+        "Punjai: rainfed. Give life irrigation only if a well or pond exists. Conserve Aadi and NE-monsoon moisture with mulch and bunds."
+      ),
+      fertility: fertility(landTypeId, "Use farmyard manure before the season. Confirm fertiliser with a soil test."),
+      pest_monitoring: spec.pest || profile.pests,
+      disease_monitoring: spec.disease || profile.diseases,
+      weather_consideration: tm.season,
+      konguNote:
+        i === 6
+          ? "Aadi is the traditional punjai sowing month in Kongu Nadu."
+          : i === 9
+            ? "Aippasi NE monsoon is Coimbatore’s main rainy season — plan drainage on nanjai and moisture storage on punjai."
+            : "",
+    };
+  });
+
+  return {
+    crop,
+    landType: land,
+    region: KONGU_NOTES.region,
+    rainfall: KONGU_NOTES.rainfall,
+    cultureNote: landTypeId === "nanjai" ? KONGU_NOTES.nanjaiCulture : KONGU_NOTES.punjaiCulture,
+    mismatch: mismatch
+      ? `${crop} is more typical of ${spec.preferred === "nanjai" ? "Nanjai (wet land)" : "Punjai (dry land)"} in Coimbatore. You can still plan it, but water or drainage may limit yield.`
+      : "",
+    disclaimer: KONGU_NOTES.disclaimer,
+    months,
+  };
+}
+
+export function fourMonthsFrom(plan, planningDate) {
+  const idx = indiaMonthIndex(planningDate || new Date());
+  const start = Number.isFinite(idx) ? idx : 0;
+  return [0, 1, 2, 3].map((offset) => plan.months[(start + offset) % 12]);
+}
